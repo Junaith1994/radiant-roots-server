@@ -43,15 +43,6 @@ async function run() {
             res.send(activities);
         });
 
-        // Query based activities api
-        /* app.get('/activities/:query?', async (req, res) => {
-            const volunteerId = req.params.query;
-            console.log(volunteerId);
-            const cursor = activitiesCollection.find();
-            const activities = await cursor.toArray();
-            res.send(activities);
-        }); */
-
         // Registered Volunteers info loading api 
         app.get('/registered-activities/:email', async (req, res) => {
             const volunteerEmail = req.params.email;
@@ -99,3 +90,6 @@ app.get('/', (req, res) => {
 app.listen(port, () => {
     console.log("Listening to port:", port);
 })
+
+// Exporting the Express API
+module.exports = app;
