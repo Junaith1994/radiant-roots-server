@@ -2,6 +2,7 @@ const express = require('express');
 require('dotenv').config();
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const cors = require('cors');
+const jwt = require('jsonwebtoken');
 
 const app = express();
 const port = process.env.PORT || 5000;
@@ -9,6 +10,36 @@ const port = process.env.PORT || 5000;
 // Middle-wires
 app.use(cors());
 app.use(express.json());
+
+// Generating Access Token
+const generateAccessToken = userEmail => {
+    return jwt.sign({ userEmail }, process.env.SECRET_TOKEN, { expiresIn: '1d' });
+}
+
+// Sending access token to the requested url
+app.post('/createNewUser', (req, res) => {
+    const userEmail = req.body.email;
+    const token = generateAccessToken(userEmail);
+    res.send(token);
+})
+
+// Verify JWT token from client side
+function verifyJwtToken(req, res, next) {
+    const authHeader = req.headers;
+    const token = authHeader && authHeader?.authorization?.split(' ')[1];
+
+    if (!token) {
+        return res.status(401).send({ title: "Unauthorized Access" })
+    }
+
+    jwt.verify(token, process.env.SECRET_TOKEN, (err, user) => {
+        if (err) {
+            return res.status(403).send({ title: "Forbidden Access" })
+        }
+        req.user = user;
+        next()
+    })
+}
 
 // MongoDb connection string
 const uri = `mongodb+srv://${process.env.DATABASE_USER}:${process.env.DATABASE_PASS}@cluster0.4ostg1n.mongodb.net/?retryWrites=true&w=majority`;
@@ -44,12 +75,20 @@ async function run() {
         });
 
         // Registered Volunteers info loading api 
-        app.get('/registered-activities/:email', async (req, res) => {
+        app.get('/registered-activities/:email', verifyJwtToken, async (req, res) => {
             const volunteerEmail = req.params.email;
-            const query = { email: volunteerEmail };
-            const cursor = volunteersCollection.find(query);
-            const volunteersInfo = await cursor.toArray();
-            res.send(volunteersInfo);
+            const verifiedJWTEmail = req.user.userEmail;
+            
+            if (volunteerEmail === verifiedJWTEmail) {
+                const query = { email: volunteerEmail };
+                const cursor = volunteersCollection.find(query);
+                const volunteersInfo = await cursor.toArray();
+                res.send(volunteersInfo);
+            }
+            else {
+                res.status(403).send("Forbidden Access")
+            }
+
         })
 
         // Post api - Creating Data and adding to the database
