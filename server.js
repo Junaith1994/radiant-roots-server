@@ -17,8 +17,8 @@ const generateAccessToken = userEmail => {
 }
 
 // Sending access token to the requested url
-app.post('/createNewUser', (req, res) => {
-    const userEmail = req.body.email;
+app.post('/createNewUser', async (req, res) => {
+    const userEmail = await req.body.email;
     const token = generateAccessToken(userEmail);
     res.send(token);
 })
